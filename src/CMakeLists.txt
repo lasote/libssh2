@@ -345,16 +345,18 @@ set(RUNTIME_DEPENDENCIES ${_RUNTIME_DEPENDENCIES} CACHE INTERNAL
     "Files that must be in the same directory as the executables at runtime.")
 
 # Package config
+IF(NOT BIICODE)
+  ## During package installation, install Libssh2Config.cmake
+  install(EXPORT Libssh2Config
+    NAMESPACE Libssh2::
+    DESTINATION lib/cmake/libssh2)
 
-## During package installation, install Libssh2Config.cmake
-install(EXPORT Libssh2Config
-  NAMESPACE Libssh2::
-  DESTINATION lib/cmake/libssh2)
+  ## During build, register directly from build tree
+  # create Libssh2Config.cmake
 
-## During build, register directly from build tree
-# create Libssh2Config.cmake
-export(TARGETS libssh2 NAMESPACE Libssh2:: FILE Libssh2Config.cmake)
-export(PACKAGE Libssh2) # register it
+  export(TARGETS libssh2 NAMESPACE Libssh2:: FILE Libssh2Config.cmake)
+  export(PACKAGE Libssh2) # register it
+ENDIF()
 
 ## Export a .pc file for client projects not using CMaek
 if(PC_REQUIRES_PRIVATE)
@@ -382,3 +384,18 @@ write_basic_package_version_file(
 install(
   FILES ${CMAKE_CURRENT_BINARY_DIR}/Libssh2ConfigVersion.cmake
   DESTINATION lib/cmake/libssh2)
+
+
+IF(BIICODE)
+  SET(BII_LIB_SRC)
+  SET(BII_BLOCK_EXES) 
+
+  ADD_BIICODE_TARGETS()
+  TARGET_INCLUDE_DIRECTORIES(${BII_LIB_TARGET} INTERFACE ${CMAKE_CURRENT_BINARY_DIR})
+  
+  # TARGET_COMPILE_DEFINITIONS(libssh2 INTERFACE "CURL_STATICLIB=${CURL_STATICLIB}")
+  TARGET_LINK_LIBRARIES(libssh2 PUBLIC ${BII_LIB_DEPS}) # Apply dependencies (openssl etc to lib)
+  TARGET_LINK_LIBRARIES(libssh2 PUBLIC ${BII_BLOCK_TARGET})
+  TARGET_LINK_LIBRARIES(${BII_LIB_TARGET} INTERFACE libssh2)
+
+ENDIF()
