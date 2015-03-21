@@ -39,6 +39,37 @@ include(CheckSymbolExists)
 include(CopyRuntimeDependencies)
 include(SocketLibraries)
 
+## Platform checks
+check_include_files(inttypes.h HAVE_INTTYPES_H)
+check_include_files(unistd.h HAVE_UNISTD_H)
+check_include_files(stdlib.h HAVE_STDLIB_H)
+check_include_files(sys/select.h HAVE_SYS_SELECT_H)
+check_include_files(sys/socket.h HAVE_SYS_SOCKET_H)
+check_include_files(sys/time.h HAVE_SYS_TIME_H)
+check_include_files(arpa/inet.h HAVE_ARPA_INET_H)
+check_include_files(netinet/in.h HAVE_NETINET_IN_H)
+check_include_files(winsock2.h HAVE_WINSOCK2_H)
+
+check_function_exists(strcasecmp HAVE_STRCASECMP)
+check_function_exists(_stricmp HAVE__STRICMP)
+check_function_exists(snprintf HAVE_SNPRINTF)
+check_function_exists(_snprintf HAVE__SNPRINTF)
+
+check_symbol_exists(__func__ "" HAVE___FUNC__)
+check_symbol_exists(__FUNCTION__ "" HAVE___FUNCTION__)
+
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/libssh2_config_cmake.h.in
+  ${CMAKE_CURRENT_BINARY_DIR}/libssh2_config.h)
+
+
+IF(BIICODE AND (NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/scp_write.c"))
+  # Someone is depending on this library and test files are not a dependency, end build them.
+  RETURN()
+ENDIF()
+
+
+
 set(EXAMPLES
   direct_tcpip
   ssh2
@@ -76,26 +107,3 @@ add_target_to_copy_dependencies(
   TARGET copy_example_dependencies
   DEPENDENCIES ${RUNTIME_DEPENDENCIES}
   BEFORE_TARGETS ${EXAMPLE_TARGETS})
-
-## Platform checks
-check_include_files(inttypes.h HAVE_INTTYPES_H)
-check_include_files(unistd.h HAVE_UNISTD_H)
-check_include_files(stdlib.h HAVE_STDLIB_H)
-check_include_files(sys/select.h HAVE_SYS_SELECT_H)
-check_include_files(sys/socket.h HAVE_SYS_SOCKET_H)
-check_include_files(sys/time.h HAVE_SYS_TIME_H)
-check_include_files(arpa/inet.h HAVE_ARPA_INET_H)
-check_include_files(netinet/in.h HAVE_NETINET_IN_H)
-check_include_files(winsock2.h HAVE_WINSOCK2_H)
-
-check_function_exists(strcasecmp HAVE_STRCASECMP)
-check_function_exists(_stricmp HAVE__STRICMP)
-check_function_exists(snprintf HAVE_SNPRINTF)
-check_function_exists(_snprintf HAVE__SNPRINTF)
-
-check_symbol_exists(__func__ "" HAVE___FUNC__)
-check_symbol_exists(__FUNCTION__ "" HAVE___FUNCTION__)
-
-configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/libssh2_config_cmake.h.in
-  ${CMAKE_CURRENT_BINARY_DIR}/libssh2_config.h)
