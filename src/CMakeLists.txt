@@ -56,47 +56,54 @@ if(CRYPTO_BACKEND)
   set(SPECIFIC_CRYPTO_REQUIREMENT REQUIRED)
 endif()
 
+IF(BIICODE)
+  set(CRYPTO_BACKEND "OpenSSL")
+ENDIF()
+
 if(CRYPTO_BACKEND STREQUAL "OpenSSL" OR NOT CRYPTO_BACKEND)
-
-  find_package(OpenSSL ${SPECIFIC_CRYPTO_REQUIREMENT})
-
-  if(OPENSSL_FOUND)
+  IF(BIICODE)
     set(CRYPTO_BACKEND "OpenSSL")
     set(CRYPTO_SOURCES openssl.c openssl.h)
-    list(APPEND PRIVATE_COMPILE_DEFINITIONS LIBSSH2_OPENSSL)
-    list(APPEND PRIVATE_INCLUDE_DIRECTORIES ${OPENSSL_INCLUDE_DIR})
-    list(APPEND LIBRARIES ${OPENSSL_LIBRARIES})
-    list(APPEND PC_REQUIRES_PRIVATE libssl libcrypto)
+  ELSE()
+    find_package(OpenSSL ${SPECIFIC_CRYPTO_REQUIREMENT})
 
-    if (WIN32)
-      find_file(DLL_LIBEAY32
-	NAMES libeay32.dll crypto.dll
-        HINTS ${_OPENSSL_ROOT_HINTS} PATHS ${_OPENSSL_ROOT_PATHS}
-        PATH_SUFFIXES bin)
-      if (NOT DLL_LIBEAY32)
-        message(WARNING
-          "Unable to find OpenSSL libeay32 DLL, executables may not run")
+    if(OPENSSL_FOUND)
+      set(CRYPTO_BACKEND "OpenSSL")
+      set(CRYPTO_SOURCES openssl.c openssl.h)
+      list(APPEND PRIVATE_COMPILE_DEFINITIONS LIBSSH2_OPENSSL)
+      list(APPEND PRIVATE_INCLUDE_DIRECTORIES ${OPENSSL_INCLUDE_DIR})
+      list(APPEND LIBRARIES ${OPENSSL_LIBRARIES})
+      list(APPEND PC_REQUIRES_PRIVATE libssl libcrypto)
+
+      if (WIN32)
+        find_file(DLL_LIBEAY32 NAMES libeay32.dll crypto.dll
+          HINTS ${_OPENSSL_ROOT_HINTS} PATHS ${_OPENSSL_ROOT_PATHS}
+          PATH_SUFFIXES bin)
+        if (NOT DLL_LIBEAY32)
+          message(WARNING
+            "Unable to find OpenSSL libeay32 DLL, executables may not run")
+        endif()
+
+        find_file(DLL_SSLEAY32
+          NAMES ssleay32.dll ssl.dll
+          HINTS ${_OPENSSL_ROOT_HINTS} PATHS ${_OPENSSL_ROOT_PATHS}
+          PATH_SUFFIXES bin)
+        if (NOT DLL_SSLEAY32)
+          message(WARNING
+            "Unable to find OpenSSL ssleay32 DLL, executables may not run")
+        endif()
+
+        if(DLL_LIBEAY32 AND DLL_SSLEAY32)
+          list(APPEND _RUNTIME_DEPENDENCIES ${DLL_LIBEAY32} ${DLL_SSLEAY32})
+        endif()
       endif()
 
-      find_file(DLL_SSLEAY32
-        NAMES ssleay32.dll ssl.dll
-        HINTS ${_OPENSSL_ROOT_HINTS} PATHS ${_OPENSSL_ROOT_PATHS}
-        PATH_SUFFIXES bin)
-      if (NOT DLL_SSLEAY32)
-        message(WARNING
-          "Unable to find OpenSSL ssleay32 DLL, executables may not run")
-      endif()
-
-      if(DLL_LIBEAY32 AND DLL_SSLEAY32)
-        list(APPEND _RUNTIME_DEPENDENCIES ${DLL_LIBEAY32} ${DLL_SSLEAY32})
-      endif()
+      # Not all OpenSSL have AES-CTR functions.
+      set(SAVE_CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES})
+      set(CMAKE_REQUIRED_LIBRARIES ${OPENSSL_LIBRARIES})
+      check_function_exists(EVP_aes_128_ctr HAVE_EVP_AES_128_CTR)
+      set(CMAKE_REQUIRED_LIBRARIES ${SAVE_CMAKE_REQUIRED_LIBRARIES})
     endif()
-
-    # Not all OpenSSL have AES-CTR functions.
-    set(SAVE_CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES})
-    set(CMAKE_REQUIRED_LIBRARIES ${OPENSSL_LIBRARIES})
-    check_function_exists(EVP_aes_128_ctr HAVE_EVP_AES_128_CTR)
-    set(CMAKE_REQUIRED_LIBRARIES ${SAVE_CMAKE_REQUIRED_LIBRARIES})
   endif()
 endif()
 
@@ -186,7 +193,7 @@ set(SOURCES
   version.c)
 
 if(WIN32)
-  list(APPEND SOURCES ${CMAKE_SOURCE_DIR}/win32/libssh2.rc)
+  list(APPEND SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/../win32/libssh2.rc)
 endif()
 
 add_library(libssh2 ${SOURCES})
@@ -391,6 +398,8 @@ IF(BIICODE)
   SET(BII_BLOCK_EXES) 
 
   ADD_BIICODE_TARGETS()
+
+  TARGET_COMPILE_DEFINITIONS(libssh2 PUBLIC "LIBSSH2_OPENSSL")
   TARGET_INCLUDE_DIRECTORIES(${BII_LIB_TARGET} INTERFACE ${CMAKE_CURRENT_BINARY_DIR})
   
   # TARGET_COMPILE_DEFINITIONS(libssh2 INTERFACE "CURL_STATICLIB=${CURL_STATICLIB}")
