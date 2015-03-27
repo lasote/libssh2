@@ -33,6 +33,11 @@
 # USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
 # OF SUCH DAMAGE.
 
+IF(BIICODE AND (NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/ssh2.c"))
+  # Someone is depending on this library and test files are not a dependency, end build them.
+  RETURN()
+ENDIF()
+
 include(CheckIncludeFiles)
 include(CheckFunctionExists)
 include(CheckSymbolExists)
